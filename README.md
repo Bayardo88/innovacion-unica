@@ -106,6 +106,8 @@ Quien edita necesita una cuenta de GitHub con permiso de escritura en `Bayardo88
 **Trabajo local (sin cuenta):** con `npm run dev`, abrí `http://localhost:4321/admin/index.html` en Chrome o Edge y elegí **Trabajar con un repositorio local**; los cambios quedan en tu carpeta y se suben con git.
 
 ### Cargar un proyecto
+Plantilla para editar a mano: [`docs/plantilla-proyecto.md`](docs/plantilla-proyecto.md) · Guía de fotos y videos: [`docs/guia-imagenes-y-video.md`](docs/guia-imagenes-y-video.md)
+
 1. **Proyectos → Nuevo proyecto**.
 2. Completá nombre, equipo, participantes (solo con su permiso), categoría, programa y **edición** (el identificador aparece en la ayuda del campo).
 3. Subí la portada y las imágenes y escribí su texto alternativo.
