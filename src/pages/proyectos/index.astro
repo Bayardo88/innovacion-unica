@@ -1,0 +1,343 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import Icon from '../../components/Icon.astro';
+import Doodle from '../../components/Doodle.astro';
+import { lines, categories } from '../../data/site';
+import { getPublicProjects, getPrograms } from '../../lib/projects';
+
+const projects = await getPublicProjects();
+const programs = await getPrograms();
+const years = [...new Set(projects.map((p) => p.year))].sort((a, b) => b - a);
+const usedCategories = Object.entries(categories).filter(([id]) => projects.some((p) => p.category === id));
+const PAGE = 12;
+---
+<Base title="Todos los proyectos" description="Buscá y filtrá los proyectos de innovación de UNICA por línea, programa, año y categoría.">
+  <section class="catalog-head">
+    <div class="container">
+      <h1 class="display h1 catalog-head__title">Todos los proyectos</h1>
+      <p class="lede">Buscá por nombre, equipo, participante o tema, y filtrá por línea, programa, año o categoría.</p>
+    </div>
+  </section>
+
+  <section class="container catalog" aria-label="Catálogo de proyectos" data-catalog data-page-size={PAGE}>
+    <form class="filters" data-filters role="search" onsubmit="return false">
+      <div class="filters__tabs" role="radiogroup" aria-label="Línea">
+        <label class="tab"><input type="radio" name="linea" value="" checked /><span>Todas</span></label>
+        {Object.values(lines).map((l) => (
+          <label class="tab"><input type="radio" name="linea" value={l.id} /><span>{l.short}</span></label>
+        ))}
+      </div>
+
+      <div class="filters__row">
+        <div class="field field--search">
+          <label for="q" class="meta">Buscar</label>
+          <div class="field__control">
+            <Icon name="search" class="field__icon" size={18} />
+            <input id="q" name="q" type="search" placeholder="Ej.: accesibilidad, Equipo Brújula, compost…" autocomplete="off" />
+          </div>
+        </div>
+        <button type="button" class="btn btn--ghost filters__toggle" aria-expanded="false" data-filter-toggle>
+          <Icon name="filter" /> <span data-filter-toggle-label>Filtros</span>
+        </button>
+        <div class="field field--extra">
+          <label for="programa" class="meta">Programa</label>
+          <select id="programa" name="programa">
+            <option value="">Todos</option>
+            {Object.values(lines).map((l) => (
+              <optgroup label={l.name}>
+                {programs.filter((p) => p.data.line === l.id).map((p) => <option value={p.id} data-line={l.id}>{p.data.name}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <div class="field field--extra">
+          <label for="anio" class="meta">Año</label>
+          <select id="anio" name="anio">
+            <option value="">Todos</option>
+            {years.map((y) => <option value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div class="field field--extra">
+          <label for="categoria" class="meta">Categoría</label>
+          <select id="categoria" name="categoria">
+            <option value="">Todas</option>
+            {usedCategories.map(([id, c]) => <option value={id}>{c.label}</option>)}
+          </select>
+        </div>
+        <div class="field field--extra">
+          <label for="orden" class="meta">Ordenar</label>
+          <select id="orden" name="orden">
+            <option value="recientes">Más recientes</option>
+            <option value="antiguos">Más antiguos</option>
+            <option value="az">A–Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filters__status">
+        <p class="filters__count" aria-live="polite" data-count>{projects.length} proyectos</p>
+        <ul class="chips" data-chips aria-label="Filtros aplicados"></ul>
+        <button type="button" class="btn btn--ghost filters__clear" data-clear hidden>Limpiar filtros</button>
+      </div>
+    </form>
+
+    <ul class="grid-projects" data-grid>
+      {projects.map((p, i) => <li data-item><ProjectCard project={p} eager={i < 3} headingLevel="h2" /></li>)}
+    </ul>
+
+    <div class="empty" data-empty hidden>
+      <Doodle kind="smiley" class="empty__doodle" />
+      <h2 class="display h3">No encontramos proyectos</h2>
+      <p>Probá con otra palabra o quitá algún filtro.</p>
+      <button type="button" class="btn btn--ink" data-clear>Limpiar filtros</button>
+    </div>
+
+    <div class="more">
+      <button type="button" class="btn btn--ghost" data-more hidden>Cargar más proyectos</button>
+    </div>
+  </section>
+</Base>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-catalog]')!;
+  const form = root.querySelector<HTMLFormElement>('[data-filters]')!;
+  const grid = root.querySelector<HTMLUListElement>('[data-grid]')!;
+  const items = [...grid.querySelectorAll<HTMLLIElement>('[data-item]')];
+  const countEl = root.querySelector<HTMLElement>('[data-count]')!;
+  const chipsEl = root.querySelector<HTMLUListElement>('[data-chips]')!;
+  const emptyEl = root.querySelector<HTMLElement>('[data-empty]')!;
+  const moreBtn = root.querySelector<HTMLButtonElement>('[data-more]')!;
+  const clearBtns = root.querySelectorAll<HTMLButtonElement>('[data-clear]');
+  const pageSize = Number(root.dataset.pageSize) || 12;
+  const keys = ['q', 'linea', 'programa', 'anio', 'categoria', 'orden'] as const;
+  type Key = (typeof keys)[number];
+  let limit = pageSize;
+
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const field = (k: Key) => form.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | RadioNodeList;
+
+  function read(): Record<Key, string> {
+    const fd = new FormData(form);
+    return Object.fromEntries(keys.map((k) => [k, String(fd.get(k) ?? '')])) as Record<Key, string>;
+  }
+  function write(state: Partial<Record<Key, string>>) {
+    for (const k of keys) {
+      const el = field(k);
+      const v = state[k] || (k === 'orden' ? 'recientes' : '');
+      if (el instanceof RadioNodeList) el.value = v;
+      else el.value = v;
+    }
+  }
+
+  function labelFor(k: Key, v: string) {
+    if (k === 'q') return `“${v}”`;
+    if (k === 'linea') return (form.querySelector(`input[name=linea][value="${v}"]`)?.nextElementSibling?.textContent) ?? v;
+    const sel = form.querySelector<HTMLSelectElement>(`select[name=${k}]`);
+    return sel?.querySelector(`option[value="${v}"]`)?.textContent ?? v;
+  }
+
+  function syncProgramOptions(linea: string) {
+    const sel = form.querySelector<HTMLSelectElement>('select[name=programa]')!;
+    sel.querySelectorAll<HTMLOptGroupElement>('optgroup').forEach((g) => {
+      const show = !linea || g.querySelector('option')?.dataset.line === linea;
+      g.hidden = !show;
+      g.disabled = !show;
+    });
+    const opt = sel.selectedOptions[0];
+    if (opt && opt.dataset.line && linea && opt.dataset.line !== linea) sel.value = '';
+  }
+
+  function apply(push = true) {
+    const s = read();
+    syncProgramOptions(s.linea);
+    const st = read();
+    const q = norm(st.q);
+    const words = q.split(/\s+/).filter(Boolean);
+
+    const matched = items.filter((li) => {
+      const c = li.querySelector<HTMLElement>('[data-card]')!.dataset;
+      if (st.linea && c.line !== st.linea) return false;
+      if (st.programa && c.program !== st.programa) return false;
+      if (st.anio && c.year !== st.anio) return false;
+      if (st.categoria && c.category !== st.categoria) return false;
+      if (words.length && !words.every((w) => c.search!.includes(w))) return false;
+      return true;
+    });
+
+    const cmp = {
+      recientes: (a: HTMLElement, b: HTMLElement) => (b.dataset.date! > a.dataset.date! ? 1 : -1),
+      antiguos: (a: HTMLElement, b: HTMLElement) => (a.dataset.date! > b.dataset.date! ? 1 : -1),
+      az: (a: HTMLElement, b: HTMLElement) => a.dataset.title!.localeCompare(b.dataset.title!, 'es'),
+    }[st.orden as 'recientes' | 'antiguos' | 'az'] ?? (() => 0);
+    const card = (li: HTMLLIElement) => li.querySelector<HTMLElement>('[data-card]')!;
+    matched.sort((a, b) => cmp(card(a), card(b)));
+
+    items.forEach((li) => (li.hidden = true));
+    matched.forEach((li, i) => {
+      grid.appendChild(li);
+      li.hidden = i >= limit;
+    });
+
+    const n = matched.length;
+    countEl.textContent = n === 1 ? '1 proyecto' : `${n} proyectos`;
+    emptyEl.hidden = n !== 0;
+    grid.hidden = n === 0;
+    moreBtn.hidden = n <= limit;
+
+    // chips
+    chipsEl.replaceChildren();
+    const active = keys.filter((k) => k !== 'orden' && st[k]);
+    for (const k of active) {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.innerHTML = `<span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>`;
+      b.querySelector('span')!.textContent = labelFor(k, st[k]);
+      b.setAttribute('aria-label', `Quitar filtro: ${labelFor(k, st[k])}`);
+      b.addEventListener('click', () => {
+        write({ ...st, [k]: '' });
+        limit = pageSize;
+        apply();
+        (form.querySelector<HTMLInputElement>('#q'))!.focus();
+      });
+      li.appendChild(b);
+      chipsEl.appendChild(li);
+    }
+    clearBtns.forEach((b) => { if (b.closest('.filters')) b.hidden = active.length === 0; });
+    const extra = active.filter((k) => k !== 'q').length;
+    const tl = root.querySelector('[data-filter-toggle-label]');
+    if (tl) tl.textContent = extra ? `Filtros (${extra})` : 'Filtros';
+
+    // URL
+    if (push) {
+      const params = new URLSearchParams();
+      for (const k of keys) if (st[k] && !(k === 'orden' && st[k] === 'recientes')) params.set(k, st[k]);
+      const qs = params.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+    }
+  }
+
+  // Estado inicial desde la URL
+  const params = new URLSearchParams(location.search);
+  write(Object.fromEntries(keys.map((k) => [k, params.get(k) ?? ''])) as Partial<Record<Key, string>>);
+  apply(false);
+
+  let t: number | undefined;
+  form.addEventListener('input', (e) => {
+    limit = pageSize;
+    if ((e.target as HTMLElement).id === 'q') {
+      clearTimeout(t);
+      t = window.setTimeout(() => apply(), 120);
+    } else apply();
+  });
+  clearBtns.forEach((b) =>
+    b.addEventListener('click', () => {
+      write({});
+      limit = pageSize;
+      apply();
+      form.querySelector<HTMLInputElement>('#q')!.focus();
+    }),
+  );
+  const toggle = root.querySelector<HTMLButtonElement>('[data-filter-toggle]')!;
+  const row = root.querySelector<HTMLElement>('.filters__row')!;
+  toggle.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(open));
+    row.classList.toggle('is-open', open);
+  });
+
+  moreBtn.addEventListener('click', () => {
+    const firstHidden = items.find((li) => li.hidden && grid.contains(li));
+    limit += pageSize;
+    apply();
+    firstHidden?.querySelector<HTMLAnchorElement>('a')?.focus();
+  });
+</script>
+
+<style>
+  .catalog-head { padding-block: clamp(40px, 7vw, 88px) var(--space-6); }
+  .catalog-head__note { display: inline-grid; transform: rotate(-2deg); margin-bottom: var(--space-2); }
+  .catalog-head__underline { width: 150px; margin-top: -4px; }
+  .catalog-head__title { margin-bottom: var(--space-4); }
+
+  .catalog { padding-bottom: var(--section); }
+  .filters {
+    display: grid; gap: var(--space-4);
+    margin-bottom: var(--space-7);
+    position: relative;
+  }
+  .filters__tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--ink); }
+  .tab { position: relative; cursor: pointer; }
+  .tab input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; }
+  .tab span {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 22px 0 16px;
+    font: 500 var(--text-xs) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--paper-raised); border: 1px solid var(--line); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+    transition: background-color 120ms var(--ease-out);
+  }
+  .tab:hover span { background: var(--sand); }
+  .tab input:checked + span { background: var(--yellow); border-color: var(--ink); }
+  .tab input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .filters__row {
+    display: grid;
+    grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(140px, 1fr));
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+  }
+  .field { display: grid; gap: 6px; align-content: start; }
+  .field .meta { color: var(--ink-soft); }
+  .field__control { position: relative; }
+  .field__icon { position: absolute; left: 12px; top: 50%; translate: 0 -50%; pointer-events: none; }
+  .field input, .field select {
+    width: 100%; min-height: 46px;
+    border: 1px solid var(--border-strong); border-radius: 2px;
+    background-color: var(--paper); color: var(--ink);
+    font: 500 var(--text-sm) / 1.2 var(--font-body);
+  }
+  .field input { padding: 0 12px 0 40px; }
+  .field input::placeholder { color: var(--ink-soft); }
+  .field select {
+    appearance: none; padding: 0 36px 0 12px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23181818' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .field select:hover, .field input:hover { background-color: var(--paper-raised); }
+
+  .filters__status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-height: 44px; }
+  .filters__count { font-family: var(--font-display); font-size: 1.5rem; text-transform: uppercase; margin-right: var(--space-2); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+  .chips :global(.chip) {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+    background: var(--yellow); border: 1px solid var(--ink); border-radius: 2px;
+    font: 500 var(--text-sm) / 1 var(--font-body); color: var(--ink); cursor: pointer;
+  }
+  .chips :global(.chip:hover) { background: var(--sand); }
+  .filters__clear { min-height: 36px; padding: 0 14px; margin-left: auto; }
+
+  .empty { display: grid; justify-items: center; text-align: center; gap: var(--space-4); padding: var(--space-9) var(--space-5); border: 1px dashed var(--ink-soft); background: var(--paper-raised); }
+  .empty__doodle { width: 64px; }
+  .more { display: flex; justify-content: center; margin-top: var(--space-7); }
+  .more .btn[hidden] { display: none; }
+
+  @media (max-width: 1100px) {
+    .filters__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .field--search { grid-column: 1 / -1; }
+  }
+  .filters__toggle { display: none; }
+  @media (max-width: 760px) {
+    .filters__tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .tab span { white-space: nowrap; }
+    .filters__row { grid-template-columns: 1fr; padding: var(--space-4); }
+    .filters__toggle { display: inline-flex; justify-self: start; min-height: 44px; }
+    .filters__row:not(.is-open) .field--extra { display: none; }
+  }
+  @media (max-width: 520px) {
+    .filters__clear { margin-left: 0; }
+  }
+</style>

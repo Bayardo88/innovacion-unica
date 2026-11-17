@@ -1,0 +1,198 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Cover from '../../components/Cover.astro';
+import PaperPhoto from '../../components/PaperPhoto.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import YouTube from '../../components/YouTube.astro';
+import Icon from '../../components/Icon.astro';
+import { categories, stages, site } from '../../data/site';
+import { getProjectView, getRelatedProjects } from '../../lib/projects';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', ({ data }) => data.visibility === 'public');
+  return projects.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const p = await getProjectView(entry);
+const d = entry.data;
+const { Content } = await render(entry);
+const tone = categories[d.category].tone;
+const related = await getRelatedProjects(p, 3);
+const tilts = [-2, 1.5, -1, 2.2, -1.6, 1];
+---
+<Base title={d.title} description={d.summary}>
+  <article class="project">
+    <header class="container project__head">
+      <div class="project__head-text">
+      <a href="/proyectos" class="back"><Icon name="arrow-left" size={18} /> Todos los proyectos</a>
+
+      {d.example && (
+        <p class="example-note" role="note">
+          <span class="sticker sticker--yellow">Ejemplo</span>
+          Proyecto ficticio de muestra. Reemplazar por un proyecto real antes de publicar el sitio.
+        </p>
+      )}
+
+      <nav class="crumbs meta" aria-label="Ubicación en el archivo">
+        <ol>
+          <li><a href={`/programas#${p.lineId}`}>{p.lineName}</a></li>
+          <li><a href={`/programas/${p.programId}`}>{p.programName}</a></li>
+          <li><a href={`/programas/${p.programId}#edicion-${p.editionId}`}>{p.editionLabel}</a></li>
+        </ol>
+      </nav>
+
+      <h1 class="display project__title">{d.title}</h1>
+      <p class="lede project__summary">{d.summary}</p>
+      <ul class="project__stickers" aria-label="Clasificación">
+        <li class={`sticker sticker--${tone}`}>Categoría: {categories[d.category].label}</li>
+        {d.stage && <li class="sticker sticker--yellow">Etapa: {stages[d.stage]}</li>}
+        {d.topics.map((t) => <li class="sticker sticker--sand">{t}</li>)}
+      </ul>
+      </div>
+      <div class="project__cover">
+        <PaperPhoto tilt={1.6} tape="corners">
+          <Cover media={d.cover} tone={tone} seed={entry.id} eager />
+        </PaperPhoto>
+      </div>
+    </header>
+
+    <div class="container project__layout">
+      <div class="project__main">
+        <section class="prose" aria-label="Descripción">
+          <Content />
+        </section>
+
+        {d.video && (
+          <section class="block" aria-labelledby="video-title">
+            <h2 id="video-title" class="display block__title">Video</h2>
+            <YouTube url={d.video} title={d.title} />
+          </section>
+        )}
+
+        {d.gallery.length > 0 && (
+          <section class="block" aria-labelledby="gallery-title">
+            <h2 id="gallery-title" class="display block__title">Imágenes</h2>
+            <ul class="gallery">
+              {d.gallery.map((m, i) => (
+                <li>
+                  <PaperPhoto tilt={tilts[i % tilts.length]} caption={m.caption}>
+                    <Cover media={m} tone={tone} seed={`${entry.id}-${i}`} />
+                  </PaperPhoto>
+                  {m.credit && <p class="meta gallery__credit">Crédito: {m.credit}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {d.links.length > 0 && (
+          <section class="block" aria-labelledby="links-title">
+            <h2 id="links-title" class="display block__title">Recursos</h2>
+            <ul class="links">
+              {d.links.map((l) => <li><a href={l.url} class="link-arrow" rel="noopener">{l.label} <Icon name="external" /></a></li>)}
+            </ul>
+          </section>
+        )}
+      </div>
+
+      <aside class="project__aside" aria-label="Ficha del proyecto">
+        <div class="sheet">
+          <p class="sheet__tab meta">Ficha</p>
+          <dl class="sheet__list">
+            <div><dt class="meta">Nombre del equipo</dt><dd class="sheet__team">{d.team}</dd></div>
+            <div>
+              <dt class="meta">Participantes</dt>
+              <dd>
+                <ul class="people">
+                  {d.participants.map((x) => (
+                    <li><span class="people__name">{x.name}</span>{x.role && <span class="people__role">{x.role}</span>}</li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+            <div><dt class="meta">Programa</dt><dd><a href={`/programas/${p.programId}`}>{p.programName}</a></dd></div>
+            <div><dt class="meta">Edición</dt><dd>{p.editionLabel}</dd></div>
+            <div><dt class="meta">Línea</dt><dd>{p.lineName}</dd></div>
+            <div><dt class="meta">Categoría</dt><dd>{categories[d.category].label}</dd></div>
+            {d.stage && <div><dt class="meta">Etapa</dt><dd>{stages[d.stage]}</dd></div>}
+          </dl>
+          <a class="sheet__fix" href={`mailto:${site.contactEmail}?subject=${encodeURIComponent('Corrección: ' + d.title)}`}>
+            ¿Ves un dato incorrecto? Avisanos
+          </a>
+        </div>
+      </aside>
+    </div>
+  </article>
+
+  {related.length > 0 && (
+    <section class="section related" aria-labelledby="related-title">
+      <div class="container">
+        <h2 id="related-title" class="display h2 related__title">Seguí explorando</h2>
+        <ul class="grid-projects">
+          {related.map((r) => <li><ProjectCard project={r} /></li>)}
+        </ul>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .project { overflow-x: clip; }
+  .project__head { padding-top: var(--space-6); padding-bottom: var(--space-8); display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-6) clamp(32px, 5vw, 80px); align-items: end; }
+  .project__head-text { display: grid; gap: var(--space-4); justify-items: start; }
+  .back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 700; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .example-note {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4); border: 1px dashed var(--ink); background: var(--paper-raised);
+    font-size: var(--text-sm);
+  }
+  .crumbs ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: var(--space-4) 0 0; padding: 0; }
+  .crumbs li + li::before { content: '/'; margin-right: 6px; color: var(--ink-soft); }
+  .crumbs a { text-decoration: none; }
+  .crumbs a:hover { text-decoration: underline; }
+  .project__title { font-size: clamp(3rem, 6.5vw, 5.75rem); max-width: 14ch; line-height: 1; }
+  .project__summary { color: var(--ink); max-width: 60ch; }
+  .project__stickers { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+
+  .project__cover { width: 100%; max-width: 520px; justify-self: end; padding-bottom: var(--space-2); }
+
+  .project__layout { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: clamp(32px, 6vw, 96px); align-items: start; padding-bottom: var(--section); }
+  .project__main { display: grid; gap: var(--space-8); min-width: 0; }
+  .prose { background: rgba(255, 253, 247, 0.86); padding: clamp(20px, 3vw, 40px); border: 1px solid var(--line); }
+  .block__title { font-size: clamp(1.75rem, 3vw, 2.5rem); margin-bottom: var(--space-5); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--space-7) var(--space-6); list-style: none; margin: 0; padding: var(--space-3) 0 0; }
+  .gallery__credit { margin-top: var(--space-2); color: var(--ink-soft); }
+  .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+
+  .project__aside { position: sticky; top: calc(var(--header-h) + var(--space-6)); }
+  .sheet { position: relative; margin-top: 34px; background: var(--paper-raised); border: 1px solid var(--ink); padding: var(--space-5); box-shadow: var(--shadow-paper); }
+  .sheet__tab {
+    position: absolute; bottom: 100%; left: -1px;
+    display: inline-flex; align-items: center; height: 34px; padding: 0 30px 0 16px;
+    background: var(--yellow); border: 1px solid var(--ink); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+  }
+  .sheet__list { margin: 0; display: grid; }
+  .sheet__list > div { padding-block: var(--space-3); border-bottom: 1px solid var(--rule); }
+  .sheet__list > div:first-child { padding-top: 0; }
+  .sheet__list dt { color: var(--ink-soft); margin-bottom: 4px; }
+  .sheet__list dd { margin: 0; font-weight: 500; }
+  .sheet__team { font-family: var(--font-display); font-size: 1.75rem; text-transform: uppercase; line-height: 1.05; }
+  .people { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .people li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+  .people__role { color: var(--ink-soft); font-size: var(--text-sm); font-weight: 400; }
+  .sheet__fix { display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--space-3); font-size: var(--text-sm); color: var(--ink-soft); }
+
+  .related { border-top: 1px solid var(--ink); background: var(--paper-raised); }
+  .related__title { margin-bottom: var(--space-7); }
+
+  @media (max-width: 960px) {
+    .project__head { grid-template-columns: 1fr; }
+    .project__cover { justify-self: start; max-width: 420px; }
+    .project__layout { grid-template-columns: 1fr; }
+    .project__aside { position: static; order: -1; }
+  }
+</style>

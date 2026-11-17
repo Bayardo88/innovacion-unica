@@ -1,0 +1,112 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import Doodle from '../../components/Doodle.astro';
+import { lines } from '../../data/site';
+import { getPrograms, getPublicProjects } from '../../lib/projects';
+import { motifSvg } from '../../lib/motifs';
+
+const programs = await getPrograms();
+const projects = await getPublicProjects();
+const count = (id: string) => projects.filter((p) => p.programId === id).length;
+const tones = { competencias: 'sand', 'innovacion-educativa': 'blue' } as const;
+/** "2026 · Marketing / Arte" en lugar de repetir el año en cada edición. */
+function editionTab(editions: { label: string; year: number }[]) {
+  const byYear = new Map<number, string[]>();
+  for (const e of editions) {
+    const rest = e.label.split('·').slice(1).join('·').trim();
+    byYear.set(e.year, [...(byYear.get(e.year) ?? []), ...(rest ? [rest] : [])]);
+  }
+  return [...byYear].map(([y, parts]) => (parts.length ? `${y} · ${parts.join(' / ')}` : String(y))).join('  ');
+}
+---
+<Base title="Programas" description="Las dos líneas del repositorio de UNICA y sus programas: competencias e innovación educativa.">
+  <section class="container head">
+    <h1 class="display h1">Programas</h1>
+    <p class="lede">Cada proyecto se archiva dentro de una línea, un programa y una edición. Elegí por dónde empezar.</p>
+  </section>
+
+  {Object.values(lines).map((line, li) => {
+    const list = programs.filter((p) => p.data.line === line.id);
+    return (
+      <section id={line.id} class:list={['line', `line--${li % 2 ? 'yellow' : 'ink'}`]} aria-labelledby={`t-${line.id}`}>
+        <div class="container">
+          <div class="line__panel">
+            <p class="line__tab meta">Línea {li + 1} de 2</p>
+            <div class="line__intro">
+              <h2 id={`t-${line.id}`} class="display h2">{line.name}</h2>
+              <p class="line__summary">{line.summary}</p>
+            </div>
+            <ul class="programs">
+              {list.map((p) => {
+                const n = count(p.id);
+                return (
+                  <li>
+                    <a href={`/programas/${p.id}`} class="program">
+                      <span class="program__tab meta">{editionTab(p.data.editions)}</span>
+                      <span class="program__art" aria-hidden="true" set:html={motifSvg(p.data.motif, tones[line.id], p.id)} />
+                      <span class="program__body">
+                        <span class="program__name">{p.data.name}</span>
+                        <span class="program__summary">{p.data.summary}</span>
+                        <span class="program__foot">
+                          <span class="meta">{n} {n === 1 ? 'proyecto' : 'proyectos'}</span>
+                          <Icon name="arrow-right" size={18} />
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </section>
+    );
+  })}
+</Base>
+
+<style>
+  .head { padding-block: clamp(40px, 7vw, 88px) var(--space-7); display: grid; gap: var(--space-4); justify-items: start; }
+  .head__note { display: inline-grid; transform: rotate(-2deg); }
+  .head__line { width: 160px; margin-top: -4px; }
+
+  .line { padding-bottom: var(--section); }
+  .line__panel { position: relative; margin-top: 34px; padding: clamp(24px, 4vw, 56px); border: 1px solid var(--ink); }
+  .line__tab {
+    position: absolute; bottom: 100%; left: -1px;
+    display: inline-flex; align-items: center; height: 36px; padding: 0 32px 0 18px;
+    border: 1px solid var(--ink); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+  }
+  .line--ink .line__panel, .line--ink .line__tab { background: var(--ink); color: var(--paper-raised); }
+  .line--ink .line__tab { color: var(--yellow); }
+  .line--yellow .line__panel, .line--yellow .line__tab { background: var(--yellow); }
+  .line--ink :focus-visible { outline-color: var(--yellow); }
+  .line__intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5) var(--space-7); align-items: end; margin-bottom: var(--space-7); }
+  .line__summary { font-size: var(--text-lg); max-width: 50ch; }
+  .line--ink .line__summary { color: var(--on-ink-soft); }
+
+  .programs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: var(--space-7) var(--space-5); list-style: none; margin: 0; padding: 0; }
+  .program {
+    position: relative; display: flex; flex-direction: column; height: 100%; margin-top: 30px;
+    background: var(--paper-raised); color: var(--ink); text-decoration: none;
+    border: 1px solid var(--ink);
+    transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  }
+  .program:hover { transform: translateY(-4px) rotate(-0.6deg); box-shadow: var(--shadow-lift); }
+  .program__tab {
+    position: absolute; bottom: 100%; left: -1px;
+    max-width: calc(100% + 2px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: inline-block; line-height: 30px; height: 30px; padding: 0 26px 0 12px;
+    background: var(--paper-raised); border: 1px solid var(--ink); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
+  }
+  .program__art { display: block; aspect-ratio: 4 / 3; border-bottom: 1px solid var(--ink); overflow: hidden; }
+  .program__art :global(svg) { width: 100%; height: 100%; }
+  .program__body { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-4) var(--space-3); flex: 1; }
+  .program__name { font-family: var(--font-display); font-size: 1.75rem; text-transform: uppercase; line-height: 1; }
+  .program__summary { font-size: var(--text-sm); color: var(--ink-soft); line-height: 1.5; }
+  .program__foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: var(--space-3); border-top: 1px dashed var(--line); }
+  @media (max-width: 760px) { .line__intro { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .program:hover { transform: none; } }
+</style>

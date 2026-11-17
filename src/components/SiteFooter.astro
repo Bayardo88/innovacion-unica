@@ -1,0 +1,62 @@
+---
+import { site, lines } from '../data/site';
+import { getProgramsByLine } from '../lib/projects';
+const comp = await getProgramsByLine('competencias');
+const edu = await getProgramsByLine('innovacion-educativa');
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="container site-footer__grid">
+    <div class="site-footer__brand">
+      <p class="site-footer__name">{site.name}</p>
+      <p class="meta site-footer__archive">{site.archiveName}</p>
+      <p class="site-footer__desc">{site.description}</p>
+    </div>
+    <nav class="site-footer__col" aria-labelledby="f-explore">
+      <h2 id="f-explore" class="meta">Explorar</h2>
+      <ul>
+        <li><a href="/proyectos">Todos los proyectos</a></li>
+        <li><a href="/programas">Programas</a></li>
+        <li><a href="/proyectos?orden=recientes">Más recientes</a></li>
+      </ul>
+    </nav>
+    <nav class="site-footer__col" aria-labelledby="f-comp">
+      <h2 id="f-comp" class="meta">{lines.competencias.short}</h2>
+      <ul>{comp.map((p) => <li><a href={`/programas/${p.id}`}>{p.data.name}</a></li>)}</ul>
+    </nav>
+    <nav class="site-footer__col" aria-labelledby="f-edu">
+      <h2 id="f-edu" class="meta">{lines['innovacion-educativa'].short}</h2>
+      <ul>{edu.map((p) => <li><a href={`/programas/${p.id}`}>{p.data.name}</a></li>)}</ul>
+    </nav>
+    <nav class="site-footer__col" aria-labelledby="f-repo">
+      <h2 id="f-repo" class="meta">Repositorio</h2>
+      <ul>
+        <li><a href="/sobre-el-repositorio">Sobre el repositorio</a></li>
+        <li><a href="/sobre-el-repositorio#publicar">Publicar un proyecto</a></li>
+        <li><a href="/sobre-el-repositorio#correcciones">Pedir una corrección</a></li>
+        <li><a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="container">
+    <div class="site-footer__base meta">
+      <span>© {year} {site.name}</span>
+      <span>Los proyectos marcados como “Ejemplo” son contenido ficticio de muestra.</span>
+    </div>
+  </div>
+</footer>
+<style>
+  .site-footer { background: var(--ink); color: var(--paper-raised); padding-top: var(--space-8); margin-top: auto; }
+  .site-footer__grid { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: var(--space-6) var(--space-5); padding-bottom: var(--space-8); }
+  .site-footer__name { font-family: var(--font-display); font-size: 3rem; line-height: 0.9; }
+  .site-footer__archive { color: var(--yellow); margin-top: var(--space-2); }
+  .site-footer__desc { margin-top: var(--space-4); color: var(--on-ink-soft); font-size: var(--text-sm); max-width: 36ch; }
+  .site-footer__col h2 { color: var(--yellow); margin-bottom: var(--space-3); }
+  .site-footer__col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .site-footer__col a { display: inline-flex; align-items: center; min-height: 36px; color: var(--paper-raised); text-decoration: none; font-size: var(--text-sm); overflow-wrap: anywhere; }
+  .site-footer__col a:hover { text-decoration: underline; text-decoration-color: var(--yellow); }
+  .site-footer :focus-visible { outline-color: var(--yellow); }
+  .site-footer__base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); padding-block: var(--space-5); border-top: 1px solid #3a3936; color: var(--on-ink-soft); }
+  @media (max-width: 1000px) { .site-footer__grid { grid-template-columns: repeat(2, 1fr); } .site-footer__brand { grid-column: 1 / -1; } }
+  @media (max-width: 520px) { .site-footer__grid { grid-template-columns: 1fr; } }
+</style>

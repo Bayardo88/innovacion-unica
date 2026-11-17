@@ -1,0 +1,42 @@
+---
+/** Copia fotográfica con cinta adhesiva. La cinta es decorativa. */
+interface Props { tilt?: number; caption?: string; tape?: 'top' | 'corners'; class?: string }
+const { tilt = 0, caption, tape = 'top', class: cls } = Astro.props;
+---
+<figure class:list={['paper-photo', `paper-photo--${tape}`, cls]} style={`--tilt:${tilt}deg`}>
+  <span class="paper-photo__tape" aria-hidden="true"></span>
+  {tape === 'corners' && <span class="paper-photo__tape paper-photo__tape--2" aria-hidden="true"></span>}
+  <div class="paper-photo__img"><slot /></div>
+  {caption && <figcaption class="note">{caption}</figcaption>}
+</figure>
+<style>
+  .paper-photo {
+    position: relative;
+    margin: 0;
+    padding: 10px 10px 28px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    box-shadow: 2px 6px 14px -6px rgba(24, 24, 24, 0.28), var(--shadow-paper);
+    transform: rotate(var(--tilt));
+    transition: transform 220ms var(--ease-out);
+  }
+  .paper-photo:has(figcaption) { padding-bottom: 12px; }
+  .paper-photo__img { overflow: hidden; }
+  .paper-photo figcaption { margin-top: 10px; font-size: 1.15rem; color: var(--ink-soft); }
+  .paper-photo__tape {
+    position: absolute;
+    z-index: 2;
+    top: -12px;
+    left: 34%;
+    width: 32%;
+    height: 24px;
+    background: var(--tape);
+    transform: rotate(-3deg);
+    box-shadow: 0 1px 1px rgba(24, 24, 24, 0.06);
+  }
+  .paper-photo--corners .paper-photo__tape { left: -18px; top: 8px; width: 74px; transform: rotate(-38deg); }
+  .paper-photo--corners .paper-photo__tape--2 { left: auto; right: -18px; top: auto; bottom: 10px; transform: rotate(-38deg); }
+  @media (hover: hover) {
+    a:hover .paper-photo, .paper-photo:hover { transform: rotate(calc(var(--tilt) * 0.4)) scale(1.015); }
+  }
+</style>

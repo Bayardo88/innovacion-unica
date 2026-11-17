@@ -1,0 +1,323 @@
+---
+import Base from '../layouts/Base.astro';
+import Cover from '../components/Cover.astro';
+import PaperPhoto from '../components/PaperPhoto.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import Doodle from '../components/Doodle.astro';
+import Icon from '../components/Icon.astro';
+import { site, lines, categories } from '../data/site';
+import { motifSvg } from '../lib/motifs';
+import { getPublicProjects, getFeaturedProjects, getProgramsByLine } from '../lib/projects';
+
+const all = await getPublicProjects();
+const featured = await getFeaturedProjects(3);
+const spotlight = featured[0];
+const heroA = featured[1] ?? all[1];
+const heroB = featured[2] ?? all[2];
+const latest = all.filter((p) => p.id !== spotlight?.id).slice(0, 3);
+
+const countBy = (programId: string) => all.filter((p) => p.programId === programId).length;
+const folders = await Promise.all(
+  (['competencias', 'innovacion-educativa'] as const).map(async (id) => {
+    const programs = await getProgramsByLine(id);
+    return {
+      ...lines[id],
+      programs: programs.map((p) => ({ id: p.id, name: p.data.name, motif: p.data.motif, count: countBy(p.id), editions: p.data.editions.length })),
+      total: programs.reduce((n, p) => n + countBy(p.id), 0),
+    };
+  }),
+);
+---
+<Base>
+  <!-- Hero -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container hero__inner">
+      {heroA && (
+        <a href={heroA.href} class="hero__photo hero__photo--a" tabindex="-1" aria-hidden="true">
+          <PaperPhoto tilt={-5}><Cover media={heroA.cover} tone={categories[heroA.category].tone} seed={heroA.id} eager /></PaperPhoto>
+        </a>
+      )}
+      {heroB && (
+        <a href={heroB.href} class="hero__photo hero__photo--b" tabindex="-1" aria-hidden="true">
+          <PaperPhoto tilt={4} tape="corners"><Cover media={heroB.cover} tone={categories[heroB.category].tone} seed={heroB.id} eager /></PaperPhoto>
+        </a>
+      )}
+      <span class="sticker sticker--pink hero__sticker" aria-hidden="true">Competencias + Innovación Educativa</span>
+      <Doodle kind="smiley" class="hero__smiley" />
+      <Doodle kind="star" class="hero__star" />
+
+      <div class="hero__copy">
+        <h1 id="hero-title" class="display hero__title">
+          Ideas<br />en acción<span class="hero__dot">.</span>
+        </h1>
+        <p class="lede hero__lede">
+          El archivo de proyectos de innovación de {site.name}: lo que estudiantes, docentes e investigadores
+          crearon en competencias y en el aula, ordenado por programa y edición.
+        </p>
+        <div class="hero__actions">
+          <a href="/proyectos" class="btn btn--ink">Explorar proyectos <Icon name="arrow-right" /></a>
+          <a href="/programas" class="btn btn--ghost">Ver programas</a>
+        </div>
+      </div>
+
+      <a href="#destacado" class="hero__scroll">
+        <span class="note">seguí bajando</span>
+        <Icon name="arrow-down" size={22} />
+      </a>
+    </div>
+  </section>
+
+  <!-- Proyecto destacado (wireframe: imagen izquierda, texto derecha) -->
+  {spotlight && (
+    <section id="destacado" class="spotlight" aria-labelledby="spotlight-title">
+      <div class="container">
+        <div class="spotlight__panel">
+          <p class="spotlight__tab meta">Proyecto destacado</p>
+          <div class="spotlight__grid">
+            <a href={spotlight.href} class="spotlight__media" tabindex="-1" aria-hidden="true">
+              <PaperPhoto tilt={-2.5}><Cover media={spotlight.cover} tone={categories[spotlight.category].tone} seed={spotlight.id} /></PaperPhoto>
+              {spotlight.example && <span class="sticker sticker--yellow spotlight__example">Ejemplo</span>}
+            </a>
+            <div class="spotlight__copy">
+              <h2 id="spotlight-title" class="display spotlight__title">{spotlight.title}</h2>
+              <p class="spotlight__summary">{spotlight.summary}</p>
+              <dl class="spotlight__facts">
+                <div><dt class="meta">Equipo</dt><dd>{spotlight.team}</dd></div>
+                <div><dt class="meta">Programa</dt><dd>{spotlight.programName}</dd></div>
+                <div><dt class="meta">Edición</dt><dd>{spotlight.editionLabel}</dd></div>
+                <div><dt class="meta">Categoría</dt><dd>{spotlight.categoryLabel}</dd></div>
+              </dl>
+              <a href={spotlight.href} class="btn btn--yellow">Ver proyecto <Icon name="arrow-right" /></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Carpetas: las dos líneas (wireframe: tarjetas superpuestas e inclinadas) -->
+  <section class="section folders" aria-labelledby="folders-title">
+    <div class="container">
+      <div class="folders__head">
+        <h2 id="folders-title" class="display h2">Dos líneas,<br />ocho programas</h2>
+        <p class="note folders__note">abrí una carpeta <Doodle kind="arrow" class="folders__arrow" /></p>
+      </div>
+      <div class="folders__stack">
+        {folders.map((f, i) => (
+          <article class:list={['folder', `folder--${i === 0 ? 'back' : 'front'}`]} aria-labelledby={`folder-${f.id}`}>
+            <div class="folder__tab meta">{f.short} · {f.programs.length} programas</div>
+            <div class="folder__body">
+              <div class="folder__intro">
+                <h3 id={`folder-${f.id}`} class="display folder__title">
+                  <a href={`/programas#${f.id}`}>{f.name}</a>
+                </h3>
+                <p class="folder__summary">{f.summary}</p>
+                <p class="meta folder__count">{f.total} {f.total === 1 ? 'proyecto' : 'proyectos'} archivados</p>
+                <div class="folder__photo" aria-hidden="true">
+                  <PaperPhoto tilt={i === 0 ? 4 : -3}>
+                    <div class="folder__sketch" set:html={motifSvg(i === 0 ? 'map' : 'book', i === 0 ? 'sand' : 'blue', f.id)} />
+                  </PaperPhoto>
+                </div>
+              </div>
+              <ul class="folder__programs">
+                {f.programs.map((p) => (
+                  <li>
+                    <a href={`/programas/${p.id}`} class="folder__program">
+                      <span class="folder__program-name">{p.name}</span>
+                      <span class="meta folder__program-meta">
+                        {p.count} {p.count === 1 ? 'proyecto' : 'proyectos'} · {p.editions} {p.editions === 1 ? 'edición' : 'ediciones'}
+                      </span>
+                      <Icon name="arrow-right" size={18} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Últimos proyectos -->
+  <section class="section latest" aria-labelledby="latest-title">
+    <div class="container">
+      <div class="latest__head">
+        <h2 id="latest-title" class="display h2">Recién archivados</h2>
+        <a href="/proyectos" class="link-arrow">Ver todos los proyectos <Icon name="arrow-right" /></a>
+      </div>
+      <ul class="grid-projects">
+        {latest.map((p) => <li><ProjectCard project={p} /></li>)}
+      </ul>
+    </div>
+  </section>
+
+  <!-- Contacto (reemplaza la suscripción del wireframe) -->
+  <section class="section contact" aria-labelledby="contact-title">
+    <div class="container contact__inner">
+      <Doodle kind="spark" class="contact__spark" />
+      <h2 id="contact-title" class="display h2 contact__title">¿Tu equipo tiene<br />un proyecto?</h2>
+      <p class="lede contact__lede">
+        Si participaste en un programa de {site.name}, escribinos con el nombre del proyecto, el equipo y el programa.
+        Te decimos qué materiales hacen falta para archivarlo.
+      </p>
+      <div class="contact__actions">
+        <a class="btn btn--ink" href={`mailto:${site.contactEmail}?subject=${encodeURIComponent('Proyecto para el Archivo de Innovación')}`}>
+          <Icon name="mail" /> Escribinos
+        </a>
+        <a class="contact__email" href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+      </div>
+      <a href="/sobre-el-repositorio#publicar" class="link-arrow">Qué necesitamos para publicarlo <Icon name="arrow-right" /></a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ---------- Hero ---------- */
+  .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--ink); }
+  .hero__inner {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    min-height: min(calc(100svh - var(--header-h)), 820px);
+    padding-block: clamp(56px, 9vw, 120px) clamp(40px, 6vw, 72px);
+  }
+  .hero__copy { position: relative; z-index: 3; display: grid; justify-items: center; text-align: center; gap: var(--space-5); max-width: 860px; }
+  .hero__title { font-size: var(--h1); line-height: 1.02; letter-spacing: -0.015em; }
+  .hero__dot { color: var(--pink); }
+  .hero__lede { margin-inline: auto; color: var(--ink); }
+  .hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-top: var(--space-2); }
+
+  .hero__photo { position: absolute; z-index: 1; display: block; width: clamp(180px, 19vw, 280px); }
+  .hero__photo--a { left: max(var(--gutter), 2%); top: 13%; }
+  .hero__photo--b { right: max(var(--gutter), 3%); bottom: 16%; }
+  .hero__sticker { position: absolute; z-index: 2; right: calc(max(var(--gutter), 3%) + 30px); top: 18%; transform: rotate(3deg); }
+  .hero__smiley { position: absolute; width: 58px; left: calc(max(var(--gutter), 2%) + 210px); bottom: 20%; transform: rotate(-12deg); }
+  .hero__star { position: absolute; width: 40px; right: 30%; top: 9%; }
+  .hero__scroll {
+    position: relative; z-index: 3;
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+    margin-top: clamp(40px, 6vw, 72px); min-height: 44px; text-decoration: none;
+  }
+  .hero__scroll :global(svg) { animation: nudge 2.4s var(--ease-out) infinite; }
+  @keyframes nudge { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(5px); } }
+
+  @media (max-width: 1180px) {
+    .hero__photo { width: clamp(150px, 17vw, 200px); }
+    .hero__photo--a { top: 6%; }
+    .hero__photo--b { bottom: 6%; }
+    .hero__smiley, .hero__star { display: none; }
+  }
+  @media (max-width: 900px) {
+    .hero__inner { justify-items: start; min-height: 0; padding-top: var(--space-7); }
+    .hero__copy { justify-items: start; text-align: left; }
+    .hero__lede { margin-inline: 0; }
+    .hero__actions { justify-content: flex-start; }
+    .hero__photo--a, .hero__sticker { display: none; }
+    .hero__photo--b { position: relative; right: auto; bottom: auto; order: 2; width: min(62%, 260px); justify-self: end; margin-top: var(--space-6); }
+    .hero__copy { order: 1; }
+    .hero__scroll { order: 3; justify-self: start; margin-top: var(--space-4); }
+  }
+
+  /* ---------- Spotlight (panel de tinta) ---------- */
+  .spotlight { padding-top: var(--section); }
+  .spotlight__panel { position: relative; margin-top: 30px; background: var(--ink); color: var(--paper-raised); }
+  .spotlight__tab {
+    position: absolute; left: 0; bottom: 100%;
+    display: inline-flex; align-items: center; height: 34px; padding: 0 28px 0 18px;
+    background: var(--ink); color: var(--yellow);
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 100%, 0 100%);
+  }
+  .spotlight__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); align-items: center; padding: clamp(28px, 5vw, 72px); }
+  .spotlight__media { position: relative; display: block; }
+  .spotlight__example { position: absolute; left: -8px; bottom: 32px; z-index: 3; transform: rotate(-4deg); }
+  .spotlight__copy { display: grid; gap: var(--space-5); justify-items: start; }
+  .spotlight__meta { color: var(--yellow); }
+  .spotlight__title { font-size: var(--h2); }
+  .spotlight__summary { font-size: var(--text-lg); color: var(--paper-raised); max-width: 46ch; line-height: 1.5; }
+  .spotlight__facts { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-6); margin: 0; padding: var(--space-4) 0; border-block: 1px solid #3a3936; width: 100%; }
+  .spotlight__facts dt { color: var(--on-ink-soft); }
+  .spotlight__facts dd { margin: 4px 0 0; font-weight: 700; }
+  .spotlight :focus-visible { outline-color: var(--yellow); }
+  @media (max-width: 860px) { .spotlight__grid { grid-template-columns: 1fr; } }
+
+  /* ---------- Folders ---------- */
+  .folders__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-8); }
+  .folders__note { display: inline-flex; align-items: flex-start; gap: 4px; transform: rotate(-3deg); margin-bottom: -40px; }
+  .folders__arrow { width: 90px; margin-top: 14px; }
+  .folders__stack { display: grid; }
+  .folder { position: relative; padding-top: 38px; }
+  .folder__tab {
+    position: absolute; top: 0; left: 0;
+    display: inline-flex; align-items: center; height: 40px; padding: 0 34px 0 20px;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 100%, 0 100%);
+  }
+  .folder__body {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(24px, 4vw, 64px);
+    padding: clamp(24px, 4vw, 56px);
+    border: 1px solid var(--ink);
+    box-shadow: 2px 8px 12px -8px rgba(24, 24, 24, 0.3);
+  }
+  .folder--back { transform: rotate(-1.4deg); width: 96%; }
+  .folder--back .folder__tab, .folder--back .folder__body { background: var(--blue-soft); }
+  .folder--front { transform: rotate(1deg); margin-top: -36px; margin-left: 4%; z-index: 1; }
+  .folder--front .folder__tab, .folder--front .folder__body { background: var(--yellow); }
+  .folder__tab { border: 1px solid var(--ink); border-bottom: 0; }
+  .folder__photo { width: 170px; margin: var(--space-3) 0 0 var(--space-2); }
+  .folder__sketch { aspect-ratio: 4 / 3; }
+  .folder__sketch :global(svg) { width: 100%; height: 100%; }
+  .folder__intro { display: grid; align-content: start; gap: var(--space-4); }
+  .folder__title { font-size: var(--h3); line-height: 1; }
+  .folder__title a { text-decoration: none; }
+  .folder__title a:hover { text-decoration: underline; text-decoration-thickness: 3px; }
+  .folder__summary { max-width: 44ch; }
+  .folder__count { color: var(--ink); opacity: 0.8; }
+  .folder__programs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
+  .folder__program {
+    display: grid; grid-template-columns: 1fr auto 20px; align-items: center; gap: var(--space-4);
+    min-height: 60px; padding: var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--ink); text-decoration: none;
+    transition: background-color 160ms var(--ease-out);
+  }
+  .folder__program-name { font-weight: 700; font-size: 1.125rem; }
+  .folder__program :global(svg) { transition: transform 180ms var(--ease-out); }
+  .folder__program-name { transition: transform 200ms var(--ease-out); }
+  .folder__program:hover { background: rgba(255, 253, 247, 0.6); }
+  .folder__program:hover .folder__program-name { transform: translateX(6px); }
+  .folder__program:hover :global(svg) { transform: translateX(4px); }
+  @media (max-width: 860px) {
+    .folders__head { flex-direction: column; align-items: flex-start; margin-bottom: var(--space-6); }
+    .folders__note { margin-bottom: 0; }
+    .folder__body { grid-template-columns: 1fr; }
+    .folder__photo { display: none; }
+    .folder--back, .folder--front { transform: none; width: 100%; margin-left: 0; }
+    .folder--front { margin-top: var(--space-5); }
+    .folder__program { grid-template-columns: 1fr 20px; }
+    .folder__program-meta { grid-row: 2; }
+  }
+
+  /* ---------- Latest ---------- */
+  .latest { padding-top: 0; }
+  .latest__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-7); }
+
+  /* ---------- Contact ---------- */
+  .contact { border-top: 1px solid var(--ink); background: var(--paper-raised); }
+  .contact__inner { position: relative; display: grid; justify-items: center; text-align: center; gap: var(--space-5); }
+  .contact__title { font-size: var(--h2); }
+  .contact__lede { margin-inline: auto; }
+  .contact__spark { position: absolute; width: 56px; top: -12px; left: 18%; }
+  .contact__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-3) var(--space-5); }
+  .contact__email {
+    display: inline-flex; align-items: center; min-height: 44px;
+    font-family: var(--font-mono); font-size: var(--text-base); overflow-wrap: anywhere;
+    text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; text-underline-offset: 0.3em;
+  }
+  .contact__email:hover { text-decoration-color: var(--ink); }
+  @media (max-width: 560px) {
+    .contact__inner { justify-items: start; text-align: left; }
+    .contact__lede { margin-inline: 0; }
+    .contact__actions { justify-content: flex-start; }
+    .contact__spark { display: none; }
+  }
+</style>

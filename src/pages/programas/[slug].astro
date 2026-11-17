@@ -1,0 +1,105 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import Icon from '../../components/Icon.astro';
+import { lines } from '../../data/site';
+import { getPrograms, getPublicProjects, type Program } from '../../lib/projects';
+import { motifSvg } from '../../lib/motifs';
+
+export async function getStaticPaths() {
+  const programs = await getPrograms();
+  return programs.map((program) => ({ params: { slug: program.id }, props: { program } }));
+}
+
+const { program } = Astro.props as { program: Program };
+const line = lines[program.data.line];
+const all = await getPublicProjects();
+const mine = all.filter((p) => p.programId === program.id);
+const editions = program.data.editions.map((e) => ({ ...e, projects: mine.filter((p) => p.editionId === e.id) }));
+const siblings = (await getPrograms()).filter((p) => p.data.line === program.data.line && p.id !== program.id);
+const tone = program.data.line === 'competencias' ? 'sand' : 'blue';
+---
+<Base title={program.data.name} description={program.data.summary}>
+  <section class="container head">
+    <a href={`/programas#${line.id}`} class="back"><Icon name="arrow-left" size={18} /> {line.name}</a>
+    <div class="head__grid">
+      <div class="head__copy">
+        <h1 class="display h1">{program.data.name}</h1>
+        <p class="lede">{program.data.summary}</p>
+        <p class="meta head__count">
+          {mine.length} {mine.length === 1 ? 'proyecto' : 'proyectos'} · {editions.length} {editions.length === 1 ? 'edición' : 'ediciones'}
+        </p>
+      </div>
+      <div class="head__art" aria-hidden="true" set:html={motifSvg(program.data.motif, tone, program.id)} />
+    </div>
+
+    {editions.length > 1 && (
+      <nav class="editions-nav" aria-label="Ediciones">
+        {editions.map((e) => <a class="editions-nav__tab" href={`#edicion-${e.id}`}>{e.label}</a>)}
+      </nav>
+    )}
+  </section>
+
+  {editions.map((e) => (
+    <section id={`edicion-${e.id}`} class="container edition" aria-labelledby={`t-${e.id}`}>
+      <div class="edition__head">
+        <h2 id={`t-${e.id}`} class="display h3">Edición {e.label}</h2>
+        <span class="meta">{e.projects.length} {e.projects.length === 1 ? 'proyecto' : 'proyectos'}</span>
+        {e.projects.length > 0 && (
+          <a class="link-arrow edition__all" href={`/proyectos?programa=${program.id}&anio=${e.year}`}>Abrir en el buscador <Icon name="arrow-right" /></a>
+        )}
+      </div>
+      {e.projects.length > 0 ? (
+        <ul class="grid-projects">{e.projects.map((p) => <li><ProjectCard project={p} /></li>)}</ul>
+      ) : (
+        <p class="edition__empty">Todavía no hay proyectos publicados en esta edición.</p>
+      )}
+    </section>
+  ))}
+
+  {siblings.length > 0 && (
+    <section class="siblings" aria-labelledby="siblings-title">
+      <div class="container">
+        <h2 id="siblings-title" class="meta siblings__title">Otros programas de {line.name}</h2>
+        <ul class="siblings__list">
+          {siblings.map((s) => <li><a class="siblings__link" href={`/programas/${s.id}`}>{s.data.name} <Icon name="arrow-right" size={18} /></a></li>)}
+        </ul>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .head { padding-top: var(--space-6); padding-bottom: var(--space-6); }
+  .back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 700; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .head__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: var(--space-7); align-items: center; margin-top: var(--space-5); }
+  .head__copy { display: grid; gap: var(--space-4); justify-items: start; }
+  .head__count { padding: 6px 10px; background: var(--paper-raised); border: 1px solid var(--line); }
+  .head__art { border: 1px solid var(--ink); transform: rotate(2deg); box-shadow: var(--shadow-paper); overflow: hidden; aspect-ratio: 4 / 3; }
+  .head__art :global(svg) { width: 100%; height: 100%; }
+  .editions-nav { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-7); border-bottom: 1px solid var(--ink); }
+  .editions-nav__tab {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 24px 0 16px;
+    font: 500 var(--text-xs) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; text-decoration: none;
+    background: var(--yellow); border: 1px solid var(--ink); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  }
+  .editions-nav__tab:nth-child(2n) { background: var(--blue-soft); }
+  .editions-nav__tab:hover { background: var(--sand); }
+
+  .edition { padding-block: var(--space-7) var(--space-8); }
+  .edition__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-6); padding-bottom: var(--space-3); border-bottom: 1px solid var(--ink); }
+  .edition__all { margin-left: auto; }
+  .edition__empty { padding: var(--space-7); border: 1px dashed var(--ink-soft); background: var(--paper-raised); }
+
+  .siblings { padding-block: var(--space-7); border-top: 1px solid var(--ink); background: var(--paper-raised); }
+  .siblings__title { margin-bottom: var(--space-4); color: var(--ink-soft); }
+  .siblings__list { display: flex; flex-wrap: wrap; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+  .siblings__link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--ink); text-decoration: none; font-weight: 700; background: var(--paper); }
+  .siblings__link:hover { background: var(--yellow); }
+  @media (max-width: 760px) {
+    .head__grid { grid-template-columns: 1fr; }
+    .head__art { max-width: 280px; }
+  }
+</style>

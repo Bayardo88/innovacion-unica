@@ -1,0 +1,89 @@
+---
+import Base from '../layouts/Base.astro';
+import Doodle from '../components/Doodle.astro';
+import Icon from '../components/Icon.astro';
+import { site, lines } from '../data/site';
+const fields = [
+  ['Nombre del proyecto', 'Cómo se llama la propuesta.'],
+  ['Nombre del equipo', 'El nombre con el que se presentaron.'],
+  ['Participantes', 'Nombre y rol de cada integrante, con su permiso para aparecer.'],
+  ['Programa y edición', 'Por ejemplo: Hackathon 2026, o Proyecto Integrador 2026 · Arte.'],
+  ['Categoría', 'Tecnológica, social, de procesos u otra.'],
+  ['Descripción', 'El reto, la propuesta, cómo se desarrolló y en qué estado está.'],
+  ['Imágenes', 'Fotos del proceso o del resultado, con autorización de quienes aparecen.'],
+  ['Video (opcional)', 'Un enlace de YouTube con la presentación o una demostración.'],
+];
+---
+<Base title="Sobre el repositorio" description="Qué es el Archivo de Innovación de UNICA, qué proyectos incluye y cómo publicar o corregir un proyecto.">
+  <section class="container head">
+    <h1 class="display h1">Sobre el<br />repositorio</h1>
+  </section>
+
+  <div class="container about">
+    <section class="about__intro" aria-labelledby="que-es">
+      <h2 id="que-es" class="display h3">Qué es</h2>
+      <p class="lede">
+        El {site.archiveName} de {site.name} reúne en un solo lugar los proyectos que estudiantes, docentes e
+        investigadores desarrollan en competencias y en el aula. Sirve para encontrar trabajos anteriores,
+        inspirarse y mostrar lo que cada programa produce.
+      </p>
+    </section>
+
+    <section class="pinned" aria-labelledby="que-incluye">
+      <span class="pinned__tape" aria-hidden="true"></span>
+      <h2 id="que-incluye" class="display h3">Qué incluye</h2>
+      <ul class="pinned__lines">
+        {Object.values(lines).map((l) => (
+          <li><strong>{l.name}.</strong> {l.summary}</li>
+        ))}
+      </ul>
+      <a href="/programas" class="link-arrow">Ver los programas <Icon name="arrow-right" /></a>
+      <Doodle kind="star" class="pinned__star" />
+    </section>
+
+    <section id="publicar" class="publish" aria-labelledby="publicar-title">
+      <h2 id="publicar-title" class="display h2">Publicar un proyecto</h2>
+      <p class="lede">Escribinos a <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> con esta información. El equipo editorial la revisa antes de publicarla.</p>
+      <ol class="fields">
+        {fields.map(([name, desc]) => (
+          <li class="fields__item">
+            <span class="fields__name">{name}</span>
+            <span class="fields__desc">{desc}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section id="correcciones" class="fix" aria-labelledby="fix-title">
+      <h2 id="fix-title" class="display h3">Correcciones</h2>
+      <p>
+        Si un dato de un proyecto es incorrecto, o querés que se retire tu nombre o una imagen, escribinos a
+        <a href={`mailto:${site.contactEmail}?subject=${encodeURIComponent('Corrección en el Archivo de Innovación')}`}>{site.contactEmail}</a>
+        indicando el proyecto. Cada ficha tiene también un enlace para avisarnos.
+      </p>
+      <p class="fix__note note">Los proyectos con la etiqueta “Ejemplo” son contenido ficticio de muestra.</p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .head { padding-block: clamp(40px, 7vw, 88px) var(--space-7); display: grid; gap: var(--space-3); justify-items: start; }
+  .head__note { transform: rotate(-2deg); }
+  .about { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-8) clamp(32px, 6vw, 96px); padding-bottom: var(--section); align-items: start; }
+  .about__intro { display: grid; gap: var(--space-4); }
+  .about__intro .lede { color: var(--ink); }
+  .pinned { position: relative; display: grid; gap: var(--space-4); padding: var(--space-6) var(--space-5) var(--space-5); background: var(--green-soft); transform: rotate(1.2deg); box-shadow: 2px 8px 18px -10px rgba(24,24,24,.35); }
+  .pinned__tape { position: absolute; top: -12px; left: 38%; width: 30%; height: 24px; background: var(--tape); transform: rotate(-3deg); }
+  .pinned__lines { margin: 0; padding-left: 1.1em; display: grid; gap: var(--space-3); }
+  .pinned__star { position: absolute; width: 36px; right: 16px; bottom: 16px; }
+  .publish { grid-column: 1 / -1; display: grid; gap: var(--space-5); border-top: 1px solid var(--ink); padding-top: var(--space-7); }
+  .publish .lede { color: var(--ink); }
+  .fields { list-style: none; counter-reset: f; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--space-4); }
+  .fields__item { counter-increment: f; display: grid; gap: 6px; padding: var(--space-4); background: var(--paper-raised); border: 1px solid var(--line); }
+  .fields__item::before { content: counter(f); font-family: var(--font-display); font-size: 1.75rem; line-height: 1; color: var(--ink); background: var(--yellow); width: 40px; height: 40px; display: grid; place-items: center; }
+  .fields__name { font-weight: 700; }
+  .fields__desc { color: var(--ink-soft); font-size: var(--text-sm); }
+  .fix { grid-column: 1 / span 1; display: grid; gap: var(--space-4); max-width: 65ch; }
+  .fix__note { color: var(--ink-soft); }
+  @media (max-width: 860px) { .about { grid-template-columns: 1fr; } .pinned { transform: none; } }
+</style>

@@ -1,0 +1,101 @@
+---
+import type { ProjectView } from '../lib/projects';
+import { categories } from '../data/site';
+import Cover from './Cover.astro';
+import Icon from './Icon.astro';
+interface Props { project: ProjectView; headingLevel?: 'h2' | 'h3'; eager?: boolean }
+const { project: p, headingLevel = 'h3', eager = false } = Astro.props;
+const tone = categories[p.category].tone;
+const H = headingLevel;
+const area = p.editionLabel.split('·').slice(1).join('·').trim();
+const search = [p.title, p.summary, p.team, p.programName, p.editionLabel, p.categoryLabel, ...(p.entry.data.topics ?? []), ...p.entry.data.participants.map((x) => x.name)]
+  .join(' ')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[̀-ͯ]/g, '');
+---
+<article
+  class="card"
+  data-card
+  data-line={p.lineId}
+  data-program={p.programId}
+  data-year={p.year}
+  data-category={p.category}
+  data-title={p.title.toLowerCase()}
+  data-date={p.publishedAt.toISOString()}
+  data-search={search}
+>
+  <p class="meta card__tab"><span class="visually-hidden">Programa y edición: </span>{p.programName} · {p.year}</p>
+  <div class="card__media">
+    <Cover media={p.cover} tone={tone} seed={p.id} eager={eager} />
+    {p.example && <span class="sticker sticker--white card__example">Ejemplo</span>}
+  </div>
+  <div class="card__body">
+    <H class="card__title"><a href={p.href} class="card__link">{p.title}</a></H>
+    <p class="card__summary">{p.summary}</p>
+    <div class="card__foot">
+      <span class="card__stickers">
+        <span class={`sticker sticker--${tone}`}><span class="visually-hidden">Categoría: </span>{p.categoryLabel}</span>
+        {area && <span class="sticker sticker--sand"><span class="visually-hidden">Área: </span>{area}</span>}
+      </span>
+      <span class="card__team">{p.team}</span>
+    </div>
+    <span class="card__cta" aria-hidden="true">Ver proyecto <Icon name="arrow-right" size={16} /></span>
+  </div>
+</article>
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 30px);
+    margin-top: 30px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    box-shadow: 3px 4px 0 rgba(24, 24, 24, 0.07);
+    transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms;
+  }
+  .card:hover, .card:focus-within {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: var(--border-strong);
+  }
+  .card__media { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .card__example { position: absolute; top: 12px; right: 12px; }
+  .card__body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5) var(--space-5) var(--space-4); flex: 1; }
+  .card__tab {
+    position: absolute; bottom: 100%; left: -1px; margin: 0;
+    max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    height: 30px; line-height: 30px; padding: 0 28px 0 12px;
+    background: var(--paper-raised); border: 1px solid var(--line); border-bottom: 0;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 100%, 0 100%);
+    transition: border-color 180ms, background-color 180ms;
+  }
+  .card:hover .card__tab, .card:focus-within .card__tab { border-color: var(--border-strong); background: var(--yellow); }
+  .card__title { font-size: 1.375rem; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; }
+  .card__link { text-decoration: none; }
+  .card__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+  .card__link:focus-visible { outline: none; }
+  .card:has(.card__link:focus-visible) { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .card__summary {
+    color: var(--ink-soft);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--space-2); }
+  .card__stickers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .card__team { font-size: var(--text-sm); font-weight: 500; text-align: right; }
+  .card__cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--line);
+    font-weight: 700; font-size: var(--text-sm);
+  }
+  .card__cta :global(svg) { transition: transform 180ms var(--ease-out); }
+  .card:hover .card__cta :global(svg) { transform: translateX(4px); }
+  @media (prefers-reduced-motion: reduce) { .card:hover, .card:focus-within { transform: none; } }
+</style>

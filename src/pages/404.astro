@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import Doodle from '../components/Doodle.astro';
+import Icon from '../components/Icon.astro';
+---
+<Base title="Página no encontrada">
+  <section class="container nf">
+    <Doodle kind="smiley" class="nf__doodle" />
+    <h1 class="display h1">Esta hoja<br />no está en el archivo</h1>
+    <p class="lede">Puede que el proyecto haya cambiado de dirección. Buscalo en el catálogo.</p>
+    <a href="/proyectos" class="btn btn--ink">Ir a todos los proyectos <Icon name="arrow-right" /></a>
+  </section>
+</Base>
+<style>
+  .nf { display: grid; justify-items: start; gap: var(--space-5); padding-block: var(--space-9); }
+  .nf__doodle { width: 72px; transform: rotate(-10deg); }
+</style>

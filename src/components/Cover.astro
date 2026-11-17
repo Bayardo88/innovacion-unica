@@ -1,0 +1,23 @@
+---
+import { motifSvg, type Motif, type Tone } from '../lib/motifs';
+/** Imagen de proyecto: foto real si existe `src`; si no, ilustración de ejemplo generada. */
+interface Props {
+  media: { src?: string; alt: string; motif?: Motif };
+  tone: Tone;
+  seed: string;
+  ratio?: '4:3' | '16:9';
+  eager?: boolean;
+  class?: string;
+}
+const { media, tone, seed, ratio = '4:3', eager = false, class: cls } = Astro.props;
+const svg = !media.src ? motifSvg(media.motif ?? 'bulb', tone, seed, ratio) : '';
+---
+{media.src ? (
+  <img class:list={['cover', cls]} src={media.src} alt={media.alt} loading={eager ? 'eager' : 'lazy'} decoding="async" style={`aspect-ratio:${ratio.replace(':', '/')}`} />
+) : (
+  <div class:list={['cover cover--sketch', cls]} role="img" aria-label={media.alt} style={`aspect-ratio:${ratio.replace(':', '/')}`} set:html={svg} />
+)}
+<style>
+  .cover { width: 100%; height: 100%; object-fit: cover; background: var(--sand); }
+  .cover--sketch :global(svg) { width: 100%; height: 100%; }
+</style>
