@@ -1,0 +1,192 @@
+# yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
+# Panel de contenido (Sveltia CMS). Los campos replican src/content.config.ts:
+# si se cambia el esquema allí, actualizar también este archivo.
+# Este archivo es público: no poner secretos.
+
+backend:
+  name: github
+  repo: Bayardo88/innovacion-unica
+  branch: main
+  commit_messages:
+    create: 'Agregar {{collection}}: {{slug}}'
+    update: 'Actualizar {{collection}}: {{slug}}'
+    delete: 'Eliminar {{collection}}: {{slug}}'
+    uploadMedia: 'Subir imagen {{path}}'
+    deleteMedia: 'Eliminar imagen {{path}}'
+
+site_url: https://unica-innovacion.netlify.app
+display_url: https://unica-innovacion.netlify.app
+logo:
+  src: /favicon.svg
+
+# Las imágenes se guardan en public/proyectos y se sirven desde /proyectos.
+media_folder: public/proyectos
+public_folder: /proyectos
+
+collections:
+  # ------------------------------------------------------------------ Proyectos
+  - name: projects
+    label: Proyectos
+    label_singular: Proyecto
+    description: Cada proyecto es una ficha del archivo. Se publica al guardar (el sitio tarda 1–2 minutos en actualizarse).
+    folder: src/content/projects
+    extension: md
+    format: frontmatter
+    create: true
+    slug: '{{slug}}'
+    identifier_field: title
+    summary: '{{title}} — {{program}} {{edition}}'
+    sortable_fields: [publishedAt, title, year]
+    view_filters:
+      - { label: Ejemplos, field: example, pattern: true }
+      - { label: Borradores, field: visibility, pattern: draft }
+    fields:
+      - { name: title, label: Nombre del proyecto, widget: string }
+      - { name: team, label: Nombre del equipo, widget: string }
+      - name: participants
+        label: Participantes
+        label_singular: Participante
+        widget: list
+        min: 1
+        hint: Solo personas que dieron permiso para aparecer en el sitio.
+        summary: '{{fields.name}} — {{fields.role}}'
+        fields:
+          - { name: name, label: Nombre, widget: string }
+          - { name: role, label: Rol, widget: string, required: false }
+      - name: category
+        label: Categoría
+        widget: select
+        options:
+          - { label: Tecnológica, value: tecnologica }
+          - { label: Social, value: social }
+          - { label: Procesos, value: procesos }
+          - { label: Otra, value: otra }
+      - name: summary
+        label: Descripción breve
+        widget: text
+        hint: Una o dos oraciones para las tarjetas (máximo 220 caracteres).
+        pattern: ['^[\s\S]{1,220}$', 'Máximo 220 caracteres']
+      - name: program
+        label: Programa
+        widget: relation
+        collection: programs
+        value_field: '{{slug}}'
+        search_fields: [name]
+        display_fields: [name]
+      - name: edition
+        label: Edición
+        widget: string
+        hint: >-
+          Identificador de la edición dentro del programa. Hoy: "2026" (Rally Nacional, Rally Latinoamericano,
+          Hackathon, Ecothon), "2026-marketing" o "2026-arte" (Culminación de Estudios, Proyecto Integrador),
+          "2026-materia" (Emprendimiento Educativo, Propiedad Intelectual).
+      - { name: year, label: Año, widget: number, value_type: int, min: 2000, max: 2100 }
+      - name: stage
+        label: Etapa
+        widget: select
+        required: false
+        options:
+          - { label: Idea, value: idea }
+          - { label: Prototipo, value: prototipo }
+          - { label: Validación, value: validacion }
+          - { label: Implementación, value: implementacion }
+          - { label: Concluido, value: concluido }
+      - { name: topics, label: Temas, widget: list, required: false, hint: 'Palabras clave, por ejemplo: educación, salud.' }
+      - name: cover
+        label: Imagen de portada
+        widget: object
+        fields:
+          - { name: src, label: Imagen, widget: image, required: false, hint: 'Formato horizontal (4:3). WebP o JPG, idealmente menos de 500 KB.' }
+          - { name: alt, label: Texto alternativo, widget: string, hint: Describí lo que se ve en la imagen. }
+          - name: motif
+            label: Ilustración de ejemplo
+            widget: select
+            required: false
+            hint: Solo para proyectos de ejemplo sin foto. Dejar vacío en proyectos reales.
+            options: [phone, leaf, bulb, gear, book, chart, people, box, map, megaphone, palette, seal]
+      - name: gallery
+        label: Imágenes
+        label_singular: Imagen
+        widget: list
+        required: false
+        summary: '{{fields.caption}}'
+        fields:
+          - { name: src, label: Imagen, widget: image }
+          - { name: alt, label: Texto alternativo, widget: string }
+          - { name: caption, label: Pie de foto, widget: string, required: false }
+          - { name: credit, label: Crédito, widget: string, required: false }
+      - name: video
+        label: Video de YouTube
+        widget: string
+        required: false
+        hint: Enlace completo, por ejemplo https://www.youtube.com/watch?v=...
+        pattern: ['^https://(www\.)?(youtube\.com|youtu\.be)/.+', 'Debe ser un enlace de YouTube']
+      - name: links
+        label: Recursos
+        label_singular: Recurso
+        widget: list
+        required: false
+        summary: '{{fields.label}}'
+        fields:
+          - { name: label, label: Texto del enlace, widget: string }
+          - { name: url, label: URL, widget: string, pattern: ['^https?://.+', 'Debe empezar con http:// o https://'] }
+      - { name: featured, label: Destacado en el inicio, widget: boolean, default: false }
+      - { name: publishedAt, label: Fecha de publicación, widget: datetime, format: YYYY-MM-DD, time_format: false }
+      - { name: example, label: Proyecto de ejemplo, widget: boolean, default: false, hint: 'Activado muestra la etiqueta "Ejemplo". Dejar apagado en proyectos reales.' }
+      - name: visibility
+        label: Visibilidad
+        widget: select
+        default: public
+        options:
+          - { label: Publicado, value: public }
+          - { label: Borrador (no se muestra), value: draft }
+      - name: body
+        label: Descripción completa
+        widget: markdown
+        hint: Mantené los títulos de sección. Borrá las secciones que no apliquen.
+        default: |-
+          ## El reto
+
+          ## La propuesta
+
+          ## Cómo se desarrolló
+
+          ## Estado actual
+
+  # ------------------------------------------------------------------ Programas
+  - name: programs
+    label: Programas
+    label_singular: Programa
+    description: Programas de cada línea y sus ediciones. Agregá una edición aquí antes de cargar proyectos en ella.
+    folder: src/content/programs
+    extension: md
+    format: frontmatter
+    create: true
+    slug: '{{slug}}'
+    identifier_field: name
+    sortable_fields: [order, name]
+    fields:
+      - { name: name, label: Nombre, widget: string }
+      - name: line
+        label: Línea
+        widget: select
+        options:
+          - { label: Proyectos de Competencias, value: competencias }
+          - { label: Innovación Educativa, value: innovacion-educativa }
+      - { name: order, label: Orden, widget: number, value_type: int, default: 0 }
+      - { name: summary, label: Descripción, widget: text }
+      - name: motif
+        label: Ilustración
+        widget: select
+        default: bulb
+        options: [phone, leaf, bulb, gear, book, chart, people, box, map, megaphone, palette, seal]
+      - name: editions
+        label: Ediciones
+        label_singular: Edición
+        widget: list
+        min: 1
+        summary: '{{fields.label}}'
+        fields:
+          - { name: id, label: Identificador, widget: string, hint: 'Sin espacios, por ejemplo 2027 o 2027-arte. Es el valor que usan los proyectos.' }
+          - { name: label, label: Nombre visible, widget: string, hint: 'Por ejemplo 2027 · Arte' }
+          - { name: year, label: Año, widget: number, value_type: int }

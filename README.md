@@ -84,9 +84,35 @@ El build falla si falta un campo obligatorio o si el programa/edición no existe
 
 Conectá el repositorio en Netlify; `netlify.toml` ya define `npm run build` y la carpeta `dist`.
 
-## Gestión de contenido (siguiente paso)
+## Panel de contenido (Sveltia CMS)
 
-Como cada proyecto es un archivo Markdown, se puede sumar un CMS basado en Git (por ejemplo Decap CMS, TinaCMS o Pages CMS) para que el equipo editorial cargue proyectos desde un formulario, sin tocar código.
+El panel está en **`/admin`** (https://unica-innovacion.netlify.app/admin/). Cada vez que se guarda un cambio, el panel hace un commit en GitHub y Netlify publica el sitio en 1–2 minutos. La configuración vive en `public/admin/config.yml` y replica los campos de `src/content.config.ts`: si cambia el esquema, hay que actualizar los dos.
+
+### Cómo ingresar
+
+Quien edita necesita una cuenta de GitHub con permiso de escritura en `Bayardo88/innovacion-unica`.
+
+**Opción A: token de acceso (funciona ya).**
+1. En GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.
+2. Repository access: solo `Bayardo88/innovacion-unica`. Permissions → Contents: **Read and write**.
+3. En `/admin`, elegí **Iniciar sesión con un token de acceso** y pegalo. Queda guardado en ese navegador.
+
+**Opción B: botón "Iniciar sesión con GitHub" (requiere configurarlo una vez).**
+1. En GitHub: Settings → Developer settings → OAuth Apps → New OAuth App.
+   Homepage URL: `https://unica-innovacion.netlify.app` · Authorization callback URL: `https://api.netlify.com/auth/done`.
+2. Copiá el Client ID y generá un Client secret.
+3. En Netlify: Project configuration → Security → OAuth → Install provider → GitHub, y pegá ambos valores.
+
+**Trabajo local (sin cuenta):** con `npm run dev`, abrí `http://localhost:4321/admin/index.html` en Chrome o Edge y elegí **Trabajar con un repositorio local**; los cambios quedan en tu carpeta y se suben con git.
+
+### Cargar un proyecto
+1. **Proyectos → Nuevo proyecto**.
+2. Completá nombre, equipo, participantes (solo con su permiso), categoría, programa y **edición** (el identificador aparece en la ayuda del campo).
+3. Subí la portada y las imágenes y escribí su texto alternativo.
+4. Dejá **Proyecto de ejemplo** apagado. Usá **Visibilidad → Borrador** para guardar sin publicar.
+5. Guardá. Si un dato no es válido (por ejemplo, una edición que no existe en el programa), el build de Netlify falla y el sitio publicado no cambia; revisá el error en el panel de deploys de Netlify.
+
+Para una edición nueva (por ejemplo 2027), agregala primero en **Programas** dentro del programa correspondiente.
 
 ## Diseño
 
