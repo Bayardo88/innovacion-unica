@@ -22,6 +22,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="es" />
     <meta name="theme-color" content="#faf9f4" />
+    <script is:inline>
+      // Oculta lo que se va a animar solo si habrá animación; se libera solo a los 3 s por seguridad.
+      if (matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+        var d = document.documentElement;
+        d.classList.add('motion');
+        setTimeout(function () { d.classList.add('motion-ready'); }, 3000);
+      }
+    </script>
   </head>
   <body>
     <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -30,5 +38,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <slot />
     </main>
     <SiteFooter />
+    <script>
+      import '../scripts/motion.ts';
+    </script>
   </body>
 </html>

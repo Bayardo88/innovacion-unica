@@ -372,3 +372,8 @@ html {
 [hidden] {
   display: none !important;
 }
+
+/* Estado previo a la animación (ver src/scripts/motion.ts y el script inline de Base.astro). */
+.motion:not(.motion-ready) :is(.hero__inner > *, .project__head, .project__aside, .head__copy, .head__art, .editions-nav, .grid-projects > li) {
+  visibility: hidden;
+}

@@ -100,6 +100,12 @@ const PAGE = 12;
 </Base>
 
 <script>
+  import { gsap } from 'gsap';
+  import { Flip } from 'gsap/Flip';
+  gsap.registerPlugin(Flip);
+  const animate = () =>
+    matchMedia('(prefers-reduced-motion: no-preference)').matches && !document.hidden;
+
   const root = document.querySelector<HTMLElement>('[data-catalog]')!;
   const form = root.querySelector<HTMLFormElement>('[data-filters]')!;
   const grid = root.querySelector<HTMLUListElement>('[data-grid]')!;
@@ -148,7 +154,14 @@ const PAGE = 12;
     if (opt && opt.dataset.line && linea && opt.dataset.line !== linea) sel.value = '';
   }
 
-  function apply(push = true) {
+  let flipTl: gsap.core.Timeline | null = null;
+
+  function apply(push = true, flip = true) {
+    // Flip: capturar posiciones antes de filtrar/reordenar, para animar la diferencia.
+    const doFlip = flip && animate();
+    if (flipTl) flipTl.progress(1).kill();
+    const state = doFlip ? Flip.getState(items, { props: 'opacity' }) : null;
+
     const s = read();
     syncProgramOptions(s.linea);
     const st = read();
@@ -184,6 +197,21 @@ const PAGE = 12;
     emptyEl.hidden = n !== 0;
     grid.hidden = n === 0;
     moreBtn.hidden = n <= limit;
+
+    if (state) {
+      flipTl = Flip.from(state, {
+        duration: 0.6,
+        ease: 'expo.out',
+        absolute: true,
+        nested: true,
+        stagger: 0.02,
+        onEnter: (els) =>
+          gsap.fromTo(els, { autoAlpha: 0, y: 30, rotation: -1.5 }, { autoAlpha: 1, y: 0, rotation: 0, duration: 0.55, ease: 'expo.out', stagger: 0.04 }),
+        onLeave: (els) => gsap.to(els, { autoAlpha: 0, scale: 0.94, duration: 0.25, ease: 'power2.in' }),
+      });
+      // El número de resultados "se actualiza" con un pequeño golpe.
+      gsap.fromTo(countEl, { y: -6, autoAlpha: 0.3 }, { y: 0, autoAlpha: 1, duration: 0.35, ease: 'power2.out' });
+    }
 
     // chips
     chipsEl.replaceChildren();
@@ -222,7 +250,18 @@ const PAGE = 12;
   // Estado inicial desde la URL
   const params = new URLSearchParams(location.search);
   write(Object.fromEntries(keys.map((k) => [k, params.get(k) ?? ''])) as Partial<Record<Key, string>>);
-  apply(false);
+  apply(false, false);
+
+  // Entrada inicial: las primeras tarjetas se archivan una tras otra.
+  if (animate()) {
+    const visible = items.filter((li) => !li.hidden);
+    const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+    tl.from('.catalog-head > .container > *', { y: 24, autoAlpha: 0, duration: 0.8, stagger: 0.08 })
+      .from('.filters__tabs .tab', { yPercent: 100, autoAlpha: 0, duration: 0.45, stagger: 0.06 }, '<0.2')
+      .from('.filters__row, .filters__status', { y: 16, autoAlpha: 0, duration: 0.6, stagger: 0.08 }, '<0.1')
+      .from(visible.slice(0, 6), { y: 46, autoAlpha: 0, duration: 0.9, stagger: 0.08, clearProps: 'transform,opacity,visibility' }, '<0.15')
+      .from(visible.slice(0, 6).map((li) => li.querySelector('.card__tab')), { yPercent: 100, duration: 0.45, stagger: 0.08 }, '<0.25');
+  }
 
   let t: number | undefined;
   form.addEventListener('input', (e) => {

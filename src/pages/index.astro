@@ -48,7 +48,8 @@ const folders = await Promise.all(
 
       <div class="hero__copy">
         <h1 id="hero-title" class="display hero__title">
-          Ideas<br />en acción<span class="hero__dot">.</span>
+          <span class="line"><span class="line__in">Ideas</span></span>
+          <span class="line"><span class="line__in">en acción<span class="hero__dot">.</span></span></span>
         </h1>
         <p class="lede hero__lede">
           El archivo de proyectos de innovación de {site.name}: lo que estudiantes, docentes e investigadores
@@ -185,7 +186,9 @@ const folders = await Promise.all(
   }
   .hero__copy { position: relative; z-index: 3; display: grid; justify-items: center; text-align: center; gap: var(--space-5); max-width: 860px; }
   .hero__title { font-size: var(--h1); line-height: 1.02; letter-spacing: -0.015em; }
-  .hero__dot { color: var(--pink); }
+  .hero__dot { display: inline-block; color: var(--pink); }
+  .hero__title .line { display: block; overflow: hidden; padding-top: 0.14em; margin-top: -0.14em; }
+  .hero__title .line__in { display: inline-block; }
   .hero__lede { margin-inline: auto; color: var(--ink); }
   .hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-top: var(--space-2); }
 
